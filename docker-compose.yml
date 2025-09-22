@@ -1,0 +1,25 @@
+services:
+  contratacao-service:
+    build: .
+    container_name: contratacao-service
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__ContratacaoDb=Host=postgres-infra;Port=5432;Database=propostadb;Username=postgres;Password=postgres
+      - PropostaService__BaseUrl=http://proposta-service:8080
+      - RabbitMQ__Host=rabbitmq-infra
+      - RabbitMQ__Port=5672
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
+      - RabbitMQ__VirtualHost=/
+      - RabbitMQ__Exchange=proposta_events
+      - RabbitMQ__Queue=contratacao.propostas.events
+    ports:
+      - "5002:8080"
+    restart: unless-stopped
+    networks:
+      - propostaservice_microservices-network
+
+networks:
+  propostaservice_microservices-network:
+    external: true
