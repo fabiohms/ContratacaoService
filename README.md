@@ -1,53 +1,256 @@
 # ContratacaoService
 
-Microserviço responsável por processar contratações de propostas aprovadas.
+[![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-blue.svg)](https://www.docker.com/)
+[![Architecture](https://img.shields.io/badge/Architecture-Hexagonal-green.svg)](https://en.wikipedia.org/wiki/Hexagonal_architecture_(software))
+
+Microserviço responsável por processar contratações baseadas em propostas aprovadas, implementado com **Arquitetura Hexagonal** (Ports and Adapters) e **.NET 8**.
+
+## ??? Arquitetura
+
+```mermaid
+graph TB
+    subgraph "External Services"
+        PS[PropostaService]
+        RMQ[RabbitMQ]
+        PG[PostgreSQL]
+    end
+    
+    subgraph "ContratacaoService"
+        subgraph "Inbound Adapters"
+            REST[REST Controller]
+            MSG[Message Consumer]
+        end
+        
+        subgraph "Application Core"
+            UC[Use Cases]
+            DOM[Domain]
+        end
+        
+        subgraph "Outbound Adapters"
+            HTTP[HTTP Client]
+            DB[Database]
+            CACHE[Cache]
+        end
+    end
+    
+    REST --> UC
+    MSG --> UC
+    UC --> DOM
+    UC --> HTTP
+    UC --> DB
+    UC --> CACHE
+    
+    HTTP --> PS
+    MSG --> RMQ
+    DB --> PG
+```
 
 ## ?? Início Rápido
 
 ### Opção 1: Script PowerShell (Recomendado)
+
+Para facilitar o início, use o script PowerShell que valida a rede Docker e inicia o serviço automaticamente.
+
 ```powershell
-# Valida rede Docker e inicia automaticamente
 .\scripts\start-with-network-validation.ps1
 ```
 
 ### Opção 2: Docker Compose
+
+Caso prefira, é possível iniciar o serviço manualmente utilizando Docker Compose.
+
 ```bash
+# Criar rede externa (uma vez apenas)
 docker network create propostaservice_microservices-network
+
+# Iniciar serviço
 docker-compose up -d
 ```
 
 ### Opção 3: Desenvolvimento Local
+
+Para desenvolvimento, você pode usar a infraestrutura padrão do Docker e executar a aplicação localmente.
+
 ```bash
+# Usar apenas infraestrutura Docker
 docker-compose up -d postgres rabbitmq
+
+# Executar aplicação localmente
 dotnet run
 ```
 
-## ?? Acesso
+## ?? Endpoints
 
-- **API**: http://localhost:5002
-- **Swagger**: http://localhost:5002/swagger
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| `POST` | `/api/contratacoes` | Solicitar nova contratação |
+| `GET` | `/api/contratacoes/{id}` | Consultar contratação por ID |
 
-## ??? Arquitetura
+### Exemplo de Uso
 
-Este serviço utiliza arquitetura hexagonal (Ports and Adapters):
+```bash
+# Solicitar contratação
+curl -X POST http://localhost:5002/api/contratacoes \
+  -H "Content-Type: application/json" \
+  -d '{"propostaId": "50bb7eda-c79a-4c47-8c6e-d0c557467d42"}'
+
+# Consultar contratação
+curl http://localhost:5002/api/contratacoes/{id}
+```
+
+## ?? Integração com Microserviços
+
+### RabbitMQ (Eventos)
+- **Exchange**: `proposta_events`
+- **Queue**: `contratacao.propostas.events`
+- **Events**:
+  - `PropostaAprovadaEvent` ? Dispara nova contratação
+  - `PropostaRejeitadaEvent` ? Atualiza cache de status
+
+### HTTP (Fallback)
+- **PropostaService**: `http://localhost:5000` (dev) / `http://proposta-service:8080` (prod)
+- **Endpoint**: `GET /api/Propostas/{id}` ? Consulta status quando cache falha
+
+## ?? Tecnologias
+
+### Core
+- **.NET 8** - Framework principal
+- **C# 12** - Linguagem de programação
+- **Entity Framework Core** - ORM para PostgreSQL
+- **ASP.NET Core** - API REST
+
+### Infraestrutura
+- **PostgreSQL** - Banco de dados principal
+- **RabbitMQ** - Message broker para eventos
+- **Docker** - Containerização
+- **Swagger/OpenAPI** - Documentação da API
+
+### Padrões e Práticas
+- **Arquitetura Hexagonal** - Ports and Adapters
+- **Clean Architecture** - Separação de responsabilidades
+- **CQRS** - Command Query Responsibility Segregation
+- **Event-Driven** - Comunicação via eventos
+- **Resilience** - Retry policies e circuit breakers
+
+## ??? Estrutura do Projeto
 
 ```
-Application/     # Casos de uso e DTOs
-Domain/         # Entidades e regras de negócio  
-Infrastructure/ # Adaptadores (DB, HTTP, Messaging)
+ContratacaoService/
+??? Application/           # ?? Casos de uso e DTOs
+?   ??? Commands/         # Comandos de entrada
+?   ??? DTOs/            # Data Transfer Objects
+?   ??? Events/          # Eventos de domínio
+?   ??? Ports/           # Interfaces (contratos)
+?   ??? UseCases/        # Lógica de aplicação
+??? Domain/               # ?? Regras de negócio
+?   ??? Entities/        # Entidades de domínio
+?   ??? Repositories/    # Contratos de persistência
+?   ??? ValueObjects/    # Objetos de valor
+??? Infrastructure/       # ?? Implementações técnicas
+?   ??? Adapters/        # Adaptadores (Inbound/Outbound)
+?   ??? Cache/           # Implementações de cache
+?   ??? Configuration/   # Configurações
+?   ??? Migrations/      # Migrations do EF Core
+??? docs/                # ?? Documentação completa
+??? scripts/             # ?? Scripts de automação
+??? docker-compose.yml   # ?? Configuração Docker
 ```
 
-## ?? Integração
+## ?? URLs de Acesso
 
-- **RabbitMQ**: Eventos de propostas aprovadas/rejeitadas
-- **HTTP**: Fallback para consulta de status
-- **PostgreSQL**: Persistência de contratações
+| Serviço | URL | Descrição |
+|---------|-----|-----------|
+| **API** | http://localhost:5002 | Endpoint principal da API |
+| **Swagger** | http://localhost:5002/swagger | Documentação interativa |
+| **Database** | localhost:5432 | PostgreSQL (contratacao) |
+| **RabbitMQ** | http://localhost:15672 | Management UI (guest/guest) |
 
-## ??? Tecnologias
+## ?? Configuração
 
-- .NET 8
-- Entity Framework Core
-- PostgreSQL
-- RabbitMQ
-- Docker
-- Swagger/OpenAPI
+### Variáveis de Ambiente (Docker)
+
+As variáveis de ambiente são configuradas no arquivo `docker-compose.yml`. Certifique-se de que estão corretas para o seu ambiente.
+
+```yaml
+environment:
+  - ASPNETCORE_ENVIRONMENT=Production
+  - ConnectionStrings__ContratacaoDb=Host=postgres;Port=5432;Database=contratacao;Username=postgres;Password=postgres
+  - PropostaService__BaseUrl=http://proposta-service:8080
+  - RabbitMQ__Host=rabbitmq
+  - RabbitMQ__Exchange=proposta_events
+  - RabbitMQ__Queue=contratacao.propostas.events
+```
+
+### Configuração Local (Development)
+
+Para configurar o projeto para desenvolvimento local, edite o arquivo `appsettings.Development.json` com as informações do seu ambiente.
+
+```json
+{
+  "ConnectionStrings": {
+    "ContratacaoDb": "Host=localhost;Port=5432;Database=propostadb;Username=postgres;Password=postgres"
+  },
+  "PropostaService": {
+    "BaseUrl": "http://localhost:5000"
+  },
+  "RabbitMQ": {
+    "Host": "localhost",
+    "Exchange": "proposta_events",
+    "Queue": "contratacao.propostas.events"
+  }
+}
+```
+
+## ?? Documentação
+
+Para documentação detalhada, consulte a pasta **[docs/](docs/README.md)**:
+
+- [?? Guia Completo](docs/README.md) - Índice de toda documentação
+- [?? Scripts](docs/scripts-guide.md) - Como usar os scripts de automação
+- [?? Docker](docs/docker-integration.md) - Configuração e execução com Docker
+- [?? Database](docs/database-setup.md) - Configuração do banco e troubleshooting
+
+## ??? Comandos Úteis
+
+```bash
+# Build e execução
+dotnet build
+dotnet run
+
+# Docker
+docker-compose up -d
+docker-compose logs -f contratacao-service
+docker-compose down
+
+# Migrations
+dotnet ef migrations add NomeDaMigration
+dotnet ef database update
+
+# Testes
+dotnet test
+```
+
+## ?? Contribuindo
+
+Contribuições são bem-vindas! Siga os passos:
+
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## ?? Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## ?? Equipe
+
+- **Desenvolvido por**: Fabio HMS
+- **Arquitetura**: Hexagonal (Ports and Adapters)
+- **Padrões**: Clean Architecture, CQRS, Event-Driven
+
+---
+
+? **Se este projeto foi útil, considere dar uma estrela!** ?
