@@ -4,9 +4,9 @@
 [![Docker](https://img.shields.io/badge/Docker-Enabled-blue.svg)](https://www.docker.com/)
 [![Architecture](https://img.shields.io/badge/Architecture-Hexagonal-green.svg)](https://en.wikipedia.org/wiki/Hexagonal_architecture_(software))
 
-Microserviço responsável por processar contratações baseadas em propostas aprovadas, implementado com **Arquitetura Hexagonal** (Ports and Adapters) e **.NET 8**.
+MicroserviÃ§o responsÃ¡vel por processar contrataÃ§Ãµes baseadas em propostas aprovadas, implementado com **Arquitetura Hexagonal** (Ports and Adapters) e **.NET 8**.
 
-## ??? Arquitetura
+## 1 Arquitetura
 
 ```mermaid
 graph TB
@@ -46,131 +46,130 @@ graph TB
     DB --> PG
 ```
 
-## ?? Início Rápido
+## 2 InÃ­cio RÃ¡pido
 
-### Opção 1: Script PowerShell (Recomendado)
+### OpÃ§Ã£o 1: Script PowerShell (Recomendado)
 
-Para facilitar o início, use o script PowerShell que valida a rede Docker e inicia o serviço automaticamente.
+Para facilitar o inÃ­cio, use o script PowerShell que valida a rede Docker e inicia o serviÃ§o automaticamente.
 
 ```powershell
 .\scripts\start-with-network-validation.ps1
 ```
 
-### Opção 2: Docker Compose
+### OpÃ§Ã£o 2: Docker Compose
 
-Caso prefira, é possível iniciar o serviço manualmente utilizando Docker Compose.
+Caso prefira, Ã© possÃ­vel iniciar o serviÃ§o manualmente utilizando Docker Compose.
 
 ```bash
 # Criar rede externa (uma vez apenas)
 docker network create propostaservice_microservices-network
 
-# Iniciar serviço
+# Iniciar serviÃ§o
 docker-compose up -d
 ```
 
-### Opção 3: Desenvolvimento Local
+### OpÃ§Ã£o 3: Desenvolvimento Local
 
-Para desenvolvimento, você pode usar a infraestrutura padrão do Docker e executar a aplicação localmente.
+Para desenvolvimento, vocÃª pode usar a infraestrutura padrÃ£o do Docker e executar a aplicaÃ§Ã£o localmente.
 
 ```bash
 # Usar apenas infraestrutura Docker
 docker-compose up -d postgres rabbitmq
 
-# Executar aplicação localmente
+# Executar aplicaÃ§Ã£o localmente
 dotnet run
 ```
 
-## ?? Endpoints
+## 3 Endpoints
 
-| Método | Endpoint | Descrição |
+| MÃ©todo | Endpoint | DescriÃ§Ã£o |
 |--------|----------|-----------|
-| `POST` | `/api/contratacoes` | Solicitar nova contratação |
-| `GET` | `/api/contratacoes/{id}` | Consultar contratação por ID |
+| `POST` | `/api/contratacoes` | Solicitar nova contrataÃ§Ã£o |
+| `GET` | `/api/contratacoes/{id}` | Consultar contrataÃ§Ã£o por ID |
 
 ### Exemplo de Uso
 
 ```bash
-# Solicitar contratação
+# Solicitar contrataÃ§Ã£o
 curl -X POST http://localhost:5002/api/contratacoes \
   -H "Content-Type: application/json" \
   -d '{"propostaId": "50bb7eda-c79a-4c47-8c6e-d0c557467d42"}'
 
-# Consultar contratação
+# Consultar contrataÃ§Ã£o
 curl http://localhost:5002/api/contratacoes/{id}
 ```
 
-## ?? Integração com Microserviços
+## 4 IntegraÃ§Ã£o com MicroserviÃ§os
 
 ### RabbitMQ (Eventos)
 - **Exchange**: `proposta_events`
 - **Queue**: `contratacao.propostas.events`
 - **Events**:
-  - `PropostaAprovadaEvent` ? Dispara nova contratação
-  - `PropostaRejeitadaEvent` ? Atualiza cache de status
+  - `PropostaAprovadaEvent` ? Atualiza cache em memÃ³ria, disponibilizando a proposta para contrataÃ§Ã£o.
+  - `PropostaRejeitadaEvent` ? Atualiza cache em memÃ³ria, indisponibilizando a proposta para contrataÃ§Ã£o.
 
 ### HTTP (Fallback)
 - **PropostaService**: `http://localhost:5000` (dev) / `http://proposta-service:8080` (prod)
 - **Endpoint**: `GET /api/Propostas/{id}` ? Consulta status quando cache falha
 
-## ?? Tecnologias
+## 5 Tecnologias
 
 ### Core
 - **.NET 8** - Framework principal
-- **C# 12** - Linguagem de programação
+- **C# 12** - Linguagem de programaÃ§Ã£o
 - **Entity Framework Core** - ORM para PostgreSQL
 - **ASP.NET Core** - API REST
 
 ### Infraestrutura
 - **PostgreSQL** - Banco de dados principal
 - **RabbitMQ** - Message broker para eventos
-- **Docker** - Containerização
-- **Swagger/OpenAPI** - Documentação da API
+- **Docker** - ContainerizaÃ§Ã£o
+- **Swagger/OpenAPI** - DocumentaÃ§Ã£o da API
 
-### Padrões e Práticas
+### PadrÃµes e PrÃ¡ticas
 - **Arquitetura Hexagonal** - Ports and Adapters
-- **Clean Architecture** - Separação de responsabilidades
+- **Clean Architecture** - SeparaÃ§Ã£o de responsabilidades
 - **CQRS** - Command Query Responsibility Segregation
-- **Event-Driven** - Comunicação via eventos
+- **Event-Driven** - ComunicaÃ§Ã£o via eventos
 - **Resilience** - Retry policies e circuit breakers
 
-## ??? Estrutura do Projeto
+## 6 Estrutura do Projeto
 
 ```
 ContratacaoService/
-??? Application/           # ?? Casos de uso e DTOs
-?   ??? Commands/         # Comandos de entrada
-?   ??? DTOs/            # Data Transfer Objects
-?   ??? Events/          # Eventos de domínio
-?   ??? Ports/           # Interfaces (contratos)
-?   ??? UseCases/        # Lógica de aplicação
-??? Domain/               # ?? Regras de negócio
-?   ??? Entities/        # Entidades de domínio
-?   ??? Repositories/    # Contratos de persistência
-?   ??? ValueObjects/    # Objetos de valor
-??? Infrastructure/       # ?? Implementações técnicas
-?   ??? Adapters/        # Adaptadores (Inbound/Outbound)
-?   ??? Cache/           # Implementações de cache
-?   ??? Configuration/   # Configurações
-?   ??? Migrations/      # Migrations do EF Core
-??? docs/                # ?? Documentação completa
-??? scripts/             # ?? Scripts de automação
-??? docker-compose.yml   # ?? Configuração Docker
+- Application/           # ?? Casos de uso e DTOs
+|__ Commands/         # Comandos de entrada
+|__ DTOs/            # Data Transfer Objects
+|__ Events/          # Eventos de domÃ­nio
+|__ Ports/           # Interfaces (contratos)
+|__ UseCases/        # LÃ³gica de aplicaÃ§Ã£o
+|__ Domain/               # ?? Regras de negÃ³cio
+    |__ Entities/        # Entidades de domÃ­nio
+    |__ Repositories/    # Contratos de persistÃªncia
+    |__ ValueObjects/    # Objetos de valor
+|__ Infrastructure/       # ?? ImplementaÃ§Ãµes tÃ©cnicas
+    |__ Adapters/        # Adaptadores (Inbound/Outbound)
+    |__ Cache/           # ImplementaÃ§Ãµes de cache
+    |__ Configuration/   # ConfiguraÃ§Ãµes
+    |__ Migrations/      # Migrations do EF Core
+|__ scripts/             # ?? Scripts de automaÃ§Ã£o
+|__ docker-compose.yml   # ?? ConfiguraÃ§Ã£o Docker
 ```
 
 ## ?? URLs de Acesso
 
-| Serviço | URL | Descrição |
+| ServiÃ§o | URL | DescriÃ§Ã£o |
 |---------|-----|-----------|
 | **API** | http://localhost:5002 | Endpoint principal da API |
-| **Swagger** | http://localhost:5002/swagger | Documentação interativa |
+| **Swagger** | http://localhost:5002/swagger | DocumentaÃ§Ã£o interativa |
 | **Database** | localhost:5432 | PostgreSQL (contratacao) |
 | **RabbitMQ** | http://localhost:15672 | Management UI (guest/guest) |
 
-## ?? Configuração
+## 7 ConfiguraÃ§Ã£o
 
-### Variáveis de Ambiente (Docker)
+### VariÃ¡veis de Ambiente (Docker)
 
-As variáveis de ambiente são configuradas no arquivo `docker-compose.yml`. Certifique-se de que estão corretas para o seu ambiente.
+As variÃ¡veis de ambiente sÃ£o configuradas no arquivo `docker-compose.yml`. Certifique-se de que estÃ£o corretas para o seu ambiente.
 
 ```yaml
 environment:
@@ -182,9 +181,9 @@ environment:
   - RabbitMQ__Queue=contratacao.propostas.events
 ```
 
-### Configuração Local (Development)
+### ConfiguraÃ§Ã£o Local (Development)
 
-Para configurar o projeto para desenvolvimento local, edite o arquivo `appsettings.Development.json` com as informações do seu ambiente.
+Para configurar o projeto para desenvolvimento local, edite o arquivo `appsettings.Development.json` com as informaÃ§Ãµes do seu ambiente.
 
 ```json
 {
@@ -202,19 +201,10 @@ Para configurar o projeto para desenvolvimento local, edite o arquivo `appsettin
 }
 ```
 
-## ?? Documentação
-
-Para documentação detalhada, consulte a pasta **[docs/](docs/README.md)**:
-
-- [?? Guia Completo](docs/README.md) - Índice de toda documentação
-- [?? Scripts](docs/scripts-guide.md) - Como usar os scripts de automação
-- [?? Docker](docs/docker-integration.md) - Configuração e execução com Docker
-- [?? Database](docs/database-setup.md) - Configuração do banco e troubleshooting
-
-## ??? Comandos Úteis
+## 8 Comandos Ãšteis
 
 ```bash
-# Build e execução
+# Build e execuÃ§Ã£o
 dotnet build
 dotnet run
 
@@ -231,26 +221,17 @@ dotnet ef database update
 dotnet test
 ```
 
-## ?? Contribuindo
+## 9 LicenÃ§a
 
-Contribuições são bem-vindas! Siga os passos:
+Este projeto estÃ¡ sob a licenÃ§a MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## ?? Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-## ?? Equipe
+## 10 Equipe
 
 - **Desenvolvido por**: Fabio HMS
 - **Arquitetura**: Hexagonal (Ports and Adapters)
-- **Padrões**: Clean Architecture, CQRS, Event-Driven
+- **PadrÃµes**: Clean Architecture, CQRS, Event-Driven
+- **Data de CriaÃ§Ã£o**: 20/09/2025
 
 ---
 
-? **Se este projeto foi útil, considere dar uma estrela!** ?
+? **Se este projeto foi Ãºtil, considere dar uma estrela!** ?
